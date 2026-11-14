@@ -5,12 +5,12 @@ Plateforme qui permet aux utilisateurs d'organiser leurs voyages depuis une seul
 ## Équipe
 | Membre | Microservice |
 |---|---|
-| Nom 1 | User Service |
-| Nom 2 | Destination Service |
-| Nom 3 | Flight Service |
-| Nom 4 | Hebergement Service |
-| Nom 5 | Transport Service |
-| Nom 6 | Payment Service |
+| Islem Louati | User Service |
+| Souha Khenissi | Destination Service |
+| Ghofrane Hraghi| Flight Service |
+| Nadine Eddouch | Hebergement Service |
+| Abir Saddour | Transport Service |
+| Rihab Solatani | Payment Service |
 
 ## Structure du dépôt
 - `Backend/` : microservices, API Gateway, Eureka Server, Config Server
@@ -21,10 +21,7 @@ Plateforme qui permet aux utilisateurs d'organiser leurs voyages depuis une seul
 Voir `Documentation/Diagrams/`
 
 ## Technologies
-Spring Boot, Spring Cloud, RabbitMQ, Angular/React, Docker
-
-## Lancer le projet
-(à compléter)
+Spring Boot, Spring Cloud, RabbitMQ, Angular, Docker
 
 ## Workflow Git
 - `main` : version stable
