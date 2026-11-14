@@ -1,0 +1,22 @@
+﻿# Java / Maven
+target/
+*.class
+*.jar
+
+# Node / Angular / React
+node_modules/
+dist/
+.angular/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Secrets et environnement
+.env
+application-local.properties
+
+# OS
+Thumbs.db
+.DS_Store
