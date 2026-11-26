@@ -27,6 +27,8 @@ public interface VolRepository extends JpaRepository<Vol, Long> {
 
     boolean existsByCompagnieId(Long compagnieId);
 
+    boolean existsByAeroportDepartIdOrAeroportArriveeId(Long departId, Long arriveeId);
+
     // Recherche publique : départ + arrivée + intervalle de dates + nb de places
     @Query("""
             SELECT v FROM Vol v
