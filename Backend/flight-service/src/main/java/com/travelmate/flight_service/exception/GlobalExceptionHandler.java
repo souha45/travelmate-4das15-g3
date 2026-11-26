@@ -64,4 +64,16 @@ public class GlobalExceptionHandler {
                 status.getReasonPhrase(), message, req.getRequestURI(), details);
         return ResponseEntity.status(status).body(body);
     }
+
+    @ExceptionHandler(InvalidRequestException.class)
+    public ResponseEntity<ErrorResponse> requeteInvalide(InvalidRequestException ex, HttpServletRequest req) {
+        return build(HttpStatus.BAD_REQUEST, ex.getMessage(), req, null);
+    }
+
+    // Paramètre obligatoire absent (ex: /recherche sans date) -> 400 au format JSON habituel
+    @ExceptionHandler(org.springframework.web.bind.MissingServletRequestParameterException.class)
+    public ResponseEntity<ErrorResponse> parametreManquant(
+            org.springframework.web.bind.MissingServletRequestParameterException ex, HttpServletRequest req) {
+        return build(HttpStatus.BAD_REQUEST, "Paramètre obligatoire manquant : " + ex.getParameterName(), req, null);
+    }
 }
