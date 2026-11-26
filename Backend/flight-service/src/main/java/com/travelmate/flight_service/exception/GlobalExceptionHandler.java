@@ -2,6 +2,7 @@ package com.travelmate.flight_service.exception;
 
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -70,6 +71,14 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.BAD_REQUEST, ex.getMessage(), req, null);
     }
 
+
+    // ===== NOUVEAU HANDLER ICI =====
+    @ExceptionHandler(OptimisticLockingFailureException.class)
+    public ResponseEntity<ErrorResponse> conflitConcurrence(OptimisticLockingFailureException ex,
+                                                            HttpServletRequest req) {
+        return build(HttpStatus.CONFLICT,
+                "Le vol vient d'être modifié par une autre opération. Veuillez réessayer", req, null);
+    }
     // Paramètre obligatoire absent (ex: /recherche sans date) -> 400 au format JSON habituel
     @ExceptionHandler(org.springframework.web.bind.MissingServletRequestParameterException.class)
     public ResponseEntity<ErrorResponse> parametreManquant(
