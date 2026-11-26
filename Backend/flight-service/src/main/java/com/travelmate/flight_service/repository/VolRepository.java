@@ -25,6 +25,8 @@ public interface VolRepository extends JpaRepository<Vol, Long> {
 
     List<Vol> findByStatutVol(StatutVol statutVol);
 
+    boolean existsByCompagnieId(Long compagnieId);
+
     // Recherche publique : départ + arrivée + intervalle de dates + nb de places
     @Query("""
             SELECT v FROM Vol v
