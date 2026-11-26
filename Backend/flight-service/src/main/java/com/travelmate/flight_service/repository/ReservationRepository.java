@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -26,6 +27,7 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
     // Réservations à faire expirer (EN_ATTENTE dont la date limite est dépassée)
     List<Reservation> findByStatutReservationAndDateExpirationBefore(
             StatutReservation statut, LocalDateTime maintenant);
-
+    // Import : java.util.Collection
+    List<Reservation> findByVolIdAndStatutReservationIn(Long volId, Collection<StatutReservation> statuts);
     boolean existsByVolId(Long volId);
 }
