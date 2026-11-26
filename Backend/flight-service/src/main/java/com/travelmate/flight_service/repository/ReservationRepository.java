@@ -26,4 +26,6 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
     // Réservations à faire expirer (EN_ATTENTE dont la date limite est dépassée)
     List<Reservation> findByStatutReservationAndDateExpirationBefore(
             StatutReservation statut, LocalDateTime maintenant);
+
+    boolean existsByVolId(Long volId);
 }

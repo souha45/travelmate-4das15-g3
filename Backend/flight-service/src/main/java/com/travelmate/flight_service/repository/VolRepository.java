@@ -45,4 +45,6 @@ public interface VolRepository extends JpaRepository<Vol, Long> {
                              @Param("debut") LocalDateTime debut,
                              @Param("fin") LocalDateTime fin,
                              @Param("nbPlaces") int nbPlaces);
+
+
 }
