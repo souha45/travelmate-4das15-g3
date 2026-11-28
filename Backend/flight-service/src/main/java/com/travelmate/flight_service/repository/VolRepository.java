@@ -31,15 +31,17 @@ public interface VolRepository extends JpaRepository<Vol, Long> {
 
     // Recherche publique : départ + arrivée + intervalle de dates + nb de places
     @Query("""
-            SELECT v FROM Vol v
-            WHERE v.aeroportDepart.codeAeroport = :codeDepart
-              AND v.aeroportArrivee.codeAeroport = :codeArrivee
-              AND v.dateHeureDepart BETWEEN :debut AND :fin
-              AND v.nbrePlacesDispo >= :nbPlaces
-              AND v.moderation = com.travelmate.flight_service.enums.StatutModeration.APPROUVE
-              AND v.statutVol = com.travelmate.flight_service.enums.StatutVol.PROGRAMME
-            ORDER BY v.dateHeureDepart ASC
-            """)
+        SELECT v FROM Vol v
+        WHERE v.aeroportDepart.codeAeroport = :codeDepart
+          AND v.aeroportArrivee.codeAeroport = :codeArrivee
+          AND v.dateHeureDepart BETWEEN :debut AND :fin
+          AND v.nbrePlacesDispo >= :nbPlaces
+          AND v.moderation = com.travelmate.flight_service.enums.StatutModeration.APPROUVE
+          AND v.compagnie.statut = com.travelmate.flight_service.enums.StatutCompagnie.ACTIVE
+          AND v.statutVol IN (com.travelmate.flight_service.enums.StatutVol.PROGRAMME,
+                              com.travelmate.flight_service.enums.StatutVol.RETARD)
+        ORDER BY v.dateHeureDepart ASC
+        """)
     List<Vol> rechercherVols(@Param("codeDepart") String codeDepart,
                              @Param("codeArrivee") String codeArrivee,
                              @Param("debut") LocalDateTime debut,

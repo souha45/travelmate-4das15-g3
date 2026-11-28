@@ -22,7 +22,7 @@ public class CompagnieMapper {
     }
 
     public CompagnieResponse toResponse(Compagnie c) {
-        return new CompagnieResponse(c.getId(), c.getNomCompagnie(),
-                c.getCodeCompagnie(), c.getPaysCompagnie());
+        return new CompagnieResponse(c.getId(), c.getNomCompagnie(), c.getCodeCompagnie(),
+                c.getPaysCompagnie(), c.getPartenaireId(), c.getStatut());
     }
 }
