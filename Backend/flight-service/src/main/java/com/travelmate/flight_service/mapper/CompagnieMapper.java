@@ -1,5 +1,6 @@
 package com.travelmate.flight_service.mapper;
 
+
 import com.travelmate.flight_service.dto.CompagnieRequest;
 import com.travelmate.flight_service.dto.CompagnieResponse;
 import com.travelmate.flight_service.entity.Compagnie;
@@ -25,4 +26,6 @@ public class CompagnieMapper {
         return new CompagnieResponse(c.getId(), c.getNomCompagnie(), c.getCodeCompagnie(),
                 c.getPaysCompagnie(), c.getPartenaireId(), c.getStatut());
     }
+
+
 }

@@ -4,10 +4,12 @@ import com.travelmate.flight_service.dto.*;
 import com.travelmate.flight_service.entity.Passager;
 import com.travelmate.flight_service.entity.Reservation;
 import com.travelmate.flight_service.entity.Vol;
+import com.travelmate.flight_service.enums.StatutCompagnie;
 import com.travelmate.flight_service.enums.StatutModeration;
 import com.travelmate.flight_service.enums.StatutReservation;
 import com.travelmate.flight_service.enums.StatutVol;
 import com.travelmate.flight_service.exception.BusinessException;
+import com.travelmate.flight_service.exception.ForbiddenException;
 import com.travelmate.flight_service.exception.InvalidRequestException;
 import com.travelmate.flight_service.exception.ResourceNotFoundException;
 import com.travelmate.flight_service.mapper.PassagerMapper;
@@ -15,6 +17,7 @@ import com.travelmate.flight_service.mapper.ReservationMapper;
 import com.travelmate.flight_service.repository.PassagerRepository;
 import com.travelmate.flight_service.repository.ReservationRepository;
 import com.travelmate.flight_service.repository.VolRepository;
+import com.travelmate.flight_service.security.CurrentUser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -45,13 +48,19 @@ public class ReservationService {
     @Value("${flight.reservation.duree-expiration-minutes:30}")
     private long dureeExpirationMinutes;
 
+
+
     // ---------- Création ----------
 
     @Transactional
     public ReservationResponse creer(ReservationRequest request) {
+
+
         Vol vol = volRepository.findById(request.volId())
                 .orElseThrow(() -> new ResourceNotFoundException("Vol introuvable avec l'id " + request.volId()));
-
+        if (vol.getCompagnie().getStatut() != StatutCompagnie.ACTIVE) {
+            throw new BusinessException("La compagnie de ce vol n'est pas disponible");
+        }
         verifierVolReservable(vol);
         List<PassagerRequest> passagersReq = request.passagers();
         verifierDoublonsDansLaRequete(passagersReq);
@@ -66,7 +75,7 @@ public class ReservationService {
         LocalDateTime maintenant = LocalDateTime.now();
         Reservation reservation = new Reservation();
         reservation.setReference(genererReference());
-        reservation.setUserId(request.userId());
+        reservation.setUserId(CurrentUser.id());   // le voyageur, depuis le token
         reservation.setVol(vol);
         reservation.setStatutReservation(StatutReservation.EN_ATTENTE);
         reservation.setNbrePassagers(nb);
@@ -89,31 +98,21 @@ public class ReservationService {
 
     @Transactional(readOnly = true)
     public List<ReservationResponse> lireToutes(Long userId, Long volId, StatutReservation statut) {
-        List<Reservation> base = (userId != null) ? reservationRepository.findByUserId(userId)
-                : (volId != null) ? reservationRepository.findByVolId(volId)
-                : reservationRepository.findAll();
+        Long moi = CurrentUser.id();
+        List<Reservation> base;
+        if (CurrentUser.isAdmin()) {
+            base = (userId != null) ? reservationRepository.findByUserId(userId) : reservationRepository.findAll();
+        } else if (CurrentUser.isPartenaire()) {
+            base = reservationRepository.findByVolCompagniePartenaireId(moi);   // réservations de SES vols
+        } else {
+            base = reservationRepository.findByUserId(moi);                     // voyageur : les siennes
+        }
         return base.stream()
+                .filter(r -> userId == null || r.getUserId().equals(userId))
                 .filter(r -> volId == null || r.getVol().getId().equals(volId))
                 .filter(r -> statut == null || r.getStatutReservation() == statut)
                 .map(mapper::toResponse)
                 .toList();
-    }
-
-    @Transactional(readOnly = true)
-    public ReservationResponse lireParId(Long id) {
-        return mapper.toResponse(trouver(id));
-    }
-
-    @Transactional(readOnly = true)
-    public ReservationResponse lireParReference(String reference) {
-        String ref = reference.trim().toUpperCase();
-        return mapper.toResponse(reservationRepository.findByReference(ref)
-                .orElseThrow(() -> new ResourceNotFoundException("Réservation introuvable avec la référence " + ref)));
-    }
-
-    @Transactional(readOnly = true)
-    public List<PassagerResponse> lirePassagers(Long reservationId) {
-        return trouver(reservationId).getPassagers().stream().map(passagerMapper::toResponse).toList();
     }
 
     @Transactional(readOnly = true)
@@ -124,11 +123,35 @@ public class ReservationService {
         return passagerRepository.findSiegesOccupes(volId);
     }
 
+    @Transactional(readOnly = true)
+    public ReservationResponse lireParId(Long id) {
+        Reservation r = trouver(id);
+        verifierAcces(r);
+        return mapper.toResponse(r);
+    }
+
+    @Transactional(readOnly = true)
+    public ReservationResponse lireParReference(String reference) {
+        String ref = reference.trim().toUpperCase();
+        Reservation r = reservationRepository.findByReference(ref)
+                .orElseThrow(() -> new ResourceNotFoundException("Réservation introuvable avec la référence " + ref));
+        verifierAcces(r);
+        return mapper.toResponse(r);
+    }
+
+    @Transactional(readOnly = true)
+    public List<PassagerResponse> lirePassagers(Long reservationId) {
+        Reservation r = trouver(reservationId);
+        verifierAcces(r);
+        return r.getPassagers().stream().map(passagerMapper::toResponse).toList();
+    }
+
     // ---------- Modification d'un passager ----------
 
     @Transactional
     public PassagerResponse modifierPassager(Long reservationId, Long passagerId, PassagerRequest request) {
         Reservation r = trouver(reservationId);
+        CurrentUser.exigerProprietaireOuAdmin(r.getUserId());
         if (!STATUTS_ACTIFS.contains(r.getStatutReservation())) {
             throw new BusinessException("Les passagers d'une réservation annulée ou expirée ne peuvent plus être modifiés");
         }
@@ -165,6 +188,7 @@ public class ReservationService {
     @Transactional
     public ReservationResponse confirmer(Long id, ConfirmationRequest request) {
         Reservation r = trouver(id);
+        CurrentUser.exigerProprietaireOuAdmin(r.getUserId());
         if (r.getStatutReservation() != StatutReservation.EN_ATTENTE) {
             throw new BusinessException("Seule une réservation en attente peut être confirmée (statut actuel : "
                     + r.getStatutReservation() + ")");
@@ -180,6 +204,7 @@ public class ReservationService {
     @Transactional
     public ReservationResponse annuler(Long id) {
         Reservation r = trouver(id);
+        CurrentUser.exigerProprietaireOuAdmin(r.getUserId());
         if (!STATUTS_ACTIFS.contains(r.getStatutReservation())) {
             throw new BusinessException("Seule une réservation en attente ou confirmée peut être annulée (statut actuel : "
                     + r.getStatutReservation() + ")");
@@ -263,6 +288,16 @@ public class ReservationService {
                     throw new InvalidRequestException("Le siège " + siege + " est attribué à plusieurs passagers de la réservation");
                 }
             }
+        }
+    }
+    /** Voyageur propriétaire, partenaire propriétaire du vol, ou admin. */
+    private void verifierAcces(Reservation r) {
+        if (CurrentUser.isAdmin()) return;
+        Long moi = CurrentUser.id();
+        boolean voyageur = moi.equals(r.getUserId());
+        boolean partenaireDuVol = moi.equals(r.getVol().getCompagnie().getPartenaireId());
+        if (!voyageur && !partenaireDuVol) {
+            throw new ForbiddenException("Cette réservation ne vous appartient pas");
         }
     }
 

@@ -6,6 +6,7 @@ import com.travelmate.flight_service.dto.VolResponse;
 import com.travelmate.flight_service.entity.Aeroport;
 import com.travelmate.flight_service.entity.Compagnie;
 import com.travelmate.flight_service.entity.Vol;
+import com.travelmate.flight_service.enums.StatutCompagnie;
 import com.travelmate.flight_service.enums.StatutModeration;
 import com.travelmate.flight_service.enums.StatutVol;
 import com.travelmate.flight_service.exception.BusinessException;
@@ -17,6 +18,7 @@ import com.travelmate.flight_service.repository.AeroportRepository;
 import com.travelmate.flight_service.repository.CompagnieRepository;
 import com.travelmate.flight_service.repository.ReservationRepository;
 import com.travelmate.flight_service.repository.VolRepository;
+import com.travelmate.flight_service.security.CurrentUser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -49,7 +51,13 @@ public class VolService {
             throw new InvalidRequestException("La date de départ doit être dans le futur");
         }
 
-        Compagnie compagnie = trouverCompagnie(request.compagnieId());
+        CurrentUser.exigerTypeCompagnieAerienne();
+        Compagnie compagnie = compagnieRepository.findByPartenaireId(CurrentUser.id())
+                .orElseThrow(() -> new BusinessException("Vous devez d'abord créer votre compagnie"));
+        if (compagnie.getStatut() != StatutCompagnie.ACTIVE) {
+            throw new BusinessException("Votre compagnie est " + compagnie.getStatut()
+                    + " : vous ne pouvez pas ajouter de vol");
+        }
         Aeroport depart = trouverAeroport(request.aeroportDepartId());
         Aeroport arrivee = trouverAeroport(request.aeroportArriveeId());
 
@@ -63,9 +71,15 @@ public class VolService {
 
     @Transactional(readOnly = true)
     public List<VolResponse> lireTous(Long compagnieId, StatutVol statut, StatutModeration moderation) {
-        List<Vol> vols = (compagnieId != null)
-                ? volRepository.findByCompagnieId(compagnieId)
-                : volRepository.findAll();
+        List<Vol> vols;
+        if (CurrentUser.isAdmin()) {
+            vols = (compagnieId != null) ? volRepository.findByCompagnieId(compagnieId) : volRepository.findAll();
+        } else {
+            // Partenaire : uniquement les vols de sa compagnie
+            vols = compagnieRepository.findByPartenaireId(CurrentUser.id())
+                    .map(c -> volRepository.findByCompagnieId(c.getId()))
+                    .orElse(List.of());
+        }
         return vols.stream()
                 .filter(v -> statut == null || v.getStatutVol() == statut)
                 .filter(v -> moderation == null || v.getModeration() == moderation)
@@ -75,21 +89,24 @@ public class VolService {
 
     @Transactional(readOnly = true)
     public VolResponse lireParId(Long id) {
-        return mapper.toResponse(trouver(id));
+        Vol vol = trouver(id);
+        verifierVisibilite(vol);
+        return mapper.toResponse(vol);
     }
 
     @Transactional(readOnly = true)
     public VolResponse lireParNumero(String numero) {
         String numeroNormalise = numero.trim().toUpperCase();
         Vol vol = volRepository.findByNumeroVol(numeroNormalise)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Vol introuvable avec le numéro " + numeroNormalise));
+                .orElseThrow(() -> new ResourceNotFoundException("Vol introuvable avec le numéro " + numeroNormalise));
+        verifierVisibilite(vol);
         return mapper.toResponse(vol);
     }
 
+
     @Transactional
     public VolResponse modifier(Long id, VolRequest request) {
-        Vol vol = trouver(id);
+        Vol vol = trouverEtVerifierProprietaire(id);
         if (vol.getStatutVol() == StatutVol.ANNULE || vol.getStatutVol() == StatutVol.TERMINE) {
             throw new BusinessException("Un vol annulé ou terminé ne peut plus être modifié");
         }
@@ -115,7 +132,9 @@ public class VolService {
             throw new InvalidRequestException("La nouvelle date de départ doit être dans le futur");
         }
 
-        Compagnie compagnie = trouverCompagnie(request.compagnieId());
+        //Compagnie compagnie = trouverCompagnie(request.compagnieId());
+
+        Compagnie compagnie = vol.getCompagnie();
         Aeroport depart = trouverAeroport(request.aeroportDepartId());
         Aeroport arrivee = trouverAeroport(request.aeroportArriveeId());
 
@@ -126,7 +145,7 @@ public class VolService {
 
     @Transactional
     public void supprimer(Long id) {
-        Vol vol = trouver(id);
+        Vol vol = trouverEtVerifierProprietaire(id);
         if (reservationRepository.existsByVolId(id)) {
             throw new BusinessException("Impossible de supprimer le vol : des réservations lui sont associées. "
                     + "Annulez-le plutôt.");
@@ -155,7 +174,7 @@ public class VolService {
 
     @Transactional
     public VolResponse approuver(Long id) {
-        Vol vol = trouver(id);
+        Vol vol = trouverEtVerifierProprietaire(id);
         if (vol.getModeration() == StatutModeration.APPROUVE) {
             throw new BusinessException("Le vol est déjà approuvé");
         }
@@ -165,7 +184,7 @@ public class VolService {
 
     @Transactional
     public VolResponse suspendre(Long id) {
-        Vol vol = trouver(id);
+        Vol vol = trouverEtVerifierProprietaire(id);
         if (vol.getModeration() == StatutModeration.SUSPENDU) {
             throw new BusinessException("Le vol est déjà suspendu");
         }
@@ -177,7 +196,7 @@ public class VolService {
 
     @Transactional
     public VolResponse retarder(Long id, RetardRequest request) {
-        Vol vol = trouver(id);
+        Vol vol = trouverEtVerifierProprietaire(id);
         if (vol.getStatutVol() != StatutVol.PROGRAMME && vol.getStatutVol() != StatutVol.RETARD) {
             throw new BusinessException("Seul un vol programmé ou déjà retardé peut être retardé");
         }
@@ -194,7 +213,7 @@ public class VolService {
 
     @Transactional
     public VolResponse annuler(Long id) {
-        Vol vol = trouver(id);
+        Vol vol = trouverEtVerifierProprietaire(id);
         if (vol.getStatutVol() == StatutVol.ANNULE) {
             throw new BusinessException("Le vol est déjà annulé");
         }
@@ -213,10 +232,26 @@ public class VolService {
                 .orElseThrow(() -> new ResourceNotFoundException("Vol introuvable avec l'id " + id));
     }
 
-    private Compagnie trouverCompagnie(Long id) {
-        return compagnieRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Compagnie introuvable avec l'id " + id));
+    /** Charge le vol et vérifie que l'utilisateur est le partenaire propriétaire (ou admin) : sinon 403. */
+    private Vol trouverEtVerifierProprietaire(Long id) {
+        Vol vol = trouver(id);
+        CurrentUser.exigerProprietaireOuAdmin(vol.getCompagnie().getPartenaireId());
+        return vol;
     }
+
+    /** Visible par tous si approuvé et compagnie active ; sinon propriétaire ou admin seulement (404 pour les autres). */
+    private void verifierVisibilite(Vol vol) {
+        boolean visible = vol.getModeration() == StatutModeration.APPROUVE
+                && vol.getCompagnie().getStatut() == StatutCompagnie.ACTIVE;
+        if (visible) return;
+        Long moi = CurrentUser.idOrNull();
+        boolean proprietaire = moi != null && moi.equals(vol.getCompagnie().getPartenaireId());
+        if (!CurrentUser.isAdmin() && !proprietaire) {
+            throw new ResourceNotFoundException("Vol introuvable avec l'id " + vol.getId());
+        }
+    }
+
+
 
     private Aeroport trouverAeroport(Long id) {
         return aeroportRepository.findById(id)

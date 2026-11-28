@@ -11,9 +11,6 @@ import java.util.List;
 @Schema(description = "Données pour créer une réservation de vol")
 public record ReservationRequest(
 
-        @Schema(example = "1", description = "Id de l'utilisateur (référence vers user-service)")
-        @NotNull(message = "L'utilisateur est obligatoire")
-        Long userId,
 
         @Schema(example = "1")
         @NotNull(message = "Le vol est obligatoire")

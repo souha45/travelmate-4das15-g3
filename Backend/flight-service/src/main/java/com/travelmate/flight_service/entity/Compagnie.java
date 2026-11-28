@@ -23,10 +23,11 @@ public class Compagnie {
     private String codeCompagnie;
     private String paysCompagnie;
 
-    @Column(unique = true)
-    private Long partenaireId;
+    @Column(name = "partenaire_id", nullable = false, unique = true)
+    private Long partenaireId;   // id du compte PARTENAIRE dans user-service (pas de clé étrangère)
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
     private StatutCompagnie statut = StatutCompagnie.ACTIVE;
 
     @OneToMany(mappedBy = "compagnie")

@@ -7,7 +7,6 @@ import jakarta.validation.constraints.Size;
 
 @Schema(description = "Données pour créer ou modifier une compagnie aérienne")
 public record CompagnieRequest(
-
         @Schema(example = "Tunisair")
         @NotBlank(message = "Le nom de la compagnie est obligatoire")
         @Size(max = 100, message = "Le nom ne doit pas dépasser 100 caractères")
