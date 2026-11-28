@@ -18,4 +18,8 @@ public interface CompagnieRepository extends JpaRepository<Compagnie, Long> {
 
     // Filtrer par pays
     List<Compagnie> findByPaysCompagnieIgnoreCase(String paysCompagnie);
+
+    Optional<Compagnie> findByPartenaireId(Long partenaireId);
+    boolean existsByPartenaireId(Long partenaireId);
+
 }
