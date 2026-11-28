@@ -34,8 +34,7 @@ public record VolRequest(
         @Max(value = 1000, message = "Maximum 1000 places")
         Integer nbrePlacesTotal,
 
-        @Schema(example = "1") @NotNull(message = "La compagnie est obligatoire")
-        Long compagnieId,
+
 
         @Schema(example = "1") @NotNull(message = "L'aéroport de départ est obligatoire")
         Long aeroportDepartId,

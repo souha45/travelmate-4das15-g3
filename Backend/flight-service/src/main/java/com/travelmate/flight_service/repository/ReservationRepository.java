@@ -30,4 +30,6 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
     // Import : java.util.Collection
     List<Reservation> findByVolIdAndStatutReservationIn(Long volId, Collection<StatutReservation> statuts);
     boolean existsByVolId(Long volId);
+
+    List<Reservation> findByVolCompagniePartenaireId(Long partenaireId);
 }

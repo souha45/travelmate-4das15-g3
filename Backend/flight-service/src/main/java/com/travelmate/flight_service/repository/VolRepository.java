@@ -38,6 +38,8 @@ public interface VolRepository extends JpaRepository<Vol, Long> {
               AND v.nbrePlacesDispo >= :nbPlaces
               AND v.moderation = com.travelmate.flight_service.enums.StatutModeration.APPROUVE
               AND v.statutVol = com.travelmate.flight_service.enums.StatutVol.PROGRAMME
+              AND v.moderation = com.travelmate.flight_service.enums.StatutModeration.APPROUVE
+              AND v.compagnie.statut = com.travelmate.flight_service.enums.StatutCompagnie.ACTIVE
             ORDER BY v.dateHeureDepart ASC
             """)
     List<Vol> rechercherVols(@Param("codeDepart") String codeDepart,

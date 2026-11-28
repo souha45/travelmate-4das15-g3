@@ -85,4 +85,14 @@ public class GlobalExceptionHandler {
             org.springframework.web.bind.MissingServletRequestParameterException ex, HttpServletRequest req) {
         return build(HttpStatus.BAD_REQUEST, "Paramètre obligatoire manquant : " + ex.getParameterName(), req, null);
     }
+
+    @ExceptionHandler({ForbiddenException.class, org.springframework.security.access.AccessDeniedException.class})
+    public ResponseEntity<ErrorResponse> interdit(RuntimeException ex, HttpServletRequest req) {
+        return build(HttpStatus.FORBIDDEN, ex.getMessage(), req, null);
+    }
+
+    @ExceptionHandler(UnauthorizedException.class)
+    public ResponseEntity<ErrorResponse> nonAuthentifie(UnauthorizedException ex, HttpServletRequest req) {
+        return build(HttpStatus.UNAUTHORIZED, ex.getMessage(), req, null);
+    }
 }

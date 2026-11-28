@@ -1,5 +1,6 @@
 package com.travelmate.flight_service.entity;
 
+import com.travelmate.flight_service.enums.StatutCompagnie;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -21,6 +22,13 @@ public class Compagnie {
     private String nomCompagnie;
     private String codeCompagnie;
     private String paysCompagnie;
+
+    @Column(name = "partenaire_id", nullable = false, unique = true)
+    private Long partenaireId;   // id du compte PARTENAIRE dans user-service (pas de clé étrangère)
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private StatutCompagnie statut = StatutCompagnie.ACTIVE;
 
     @OneToMany(mappedBy = "compagnie")
     private List<Vol> vols = new ArrayList<>();

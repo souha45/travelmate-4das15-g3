@@ -1,6 +1,7 @@
 package com.travelmate.flight_service.repository;
 
 import com.travelmate.flight_service.entity.Compagnie;
+import com.travelmate.flight_service.enums.StatutCompagnie;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -18,4 +19,8 @@ public interface CompagnieRepository extends JpaRepository<Compagnie, Long> {
 
     // Filtrer par pays
     List<Compagnie> findByPaysCompagnieIgnoreCase(String paysCompagnie);
+
+    Optional<Compagnie> findByPartenaireId(Long partenaireId);
+    boolean existsByPartenaireId(Long partenaireId);
+    List<Compagnie> findByStatut(StatutCompagnie statut);
 }
